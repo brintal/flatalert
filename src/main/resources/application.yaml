@@ -1,0 +1,14 @@
+
+
+execution:
+  intervalMillis: 1000
+  alerts:
+    token: replaceMe #telegram bot token
+    chatId: replaceMe #telegram chat id
+
+coops:
+  configs:
+    -
+      name: testpage
+      url: 'https://michaelfischer.work/'
+      selector: 'div.resume-tagline'
