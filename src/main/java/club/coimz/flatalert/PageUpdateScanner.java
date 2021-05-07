@@ -4,11 +4,11 @@ package club.coimz.flatalert;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.*;
 import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,8 +16,6 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +28,6 @@ public class PageUpdateScanner {
 
     private final CoopsConfiguration coopsConfiguration;
     private final AlertConfiguration alertConfiguration;
-
 
     private Map<String, String> contentMap = new HashMap<>();
 
@@ -90,20 +87,11 @@ public class PageUpdateScanner {
 
         for (AbstractDelta<String> delta : patch.getDeltas()) {
             if (delta instanceof DeleteDelta) {
-                delta.getSource().getLines().forEach(str -> {
-                    removed.append(str);
-                    removed.append("\n");
-                });
+                addLinesToBuilder(removed, delta.getSource().getLines());
             } else if (delta instanceof InsertDelta) {
-                delta.getTarget().getLines().forEach(str -> {
-                    added.append(str);
-                    added.append("\n");
-                });
+                addLinesToBuilder(added, delta.getTarget().getLines());
             } else if (delta instanceof ChangeDelta) {
-                delta.getTarget().getLines().forEach(str -> {
-                    changed.append(str);
-                    changed.append("\n");
-                });
+                addLinesToBuilder(changed, delta.getTarget().getLines());
             }
         }
 
@@ -121,7 +109,19 @@ public class PageUpdateScanner {
             total.append("\nchanged: \n");
             total.append(changed.toString());
         }
-        return total.toString().replaceAll("\\<.*?>","");
+        return total.toString()
+                .replaceAll("\\<.*?>", "")
+                .replaceAll("&nbsp", " ");
+    }
+
+
+    private void addLinesToBuilder(StringBuilder builder, List<String> lines) {
+        lines.forEach(str -> {
+            if (StringUtils.isNotBlank(str.trim())) {
+                builder.append(str);
+                builder.append("\n");
+            }
+        });
     }
 
     private void sendAlert(String messageTemplate, CoopConfig coopConfig) {
@@ -135,8 +135,7 @@ public class PageUpdateScanner {
         log.info("sending message: " + message);
 
         try {
-            SendMessage request = new SendMessage(
-                    alertConfiguration.getChatId(), message);
+            SendMessage request = new SendMessage(alertConfiguration.getChatId(), message);
             request.disableWebPagePreview(true);
             SendResponse sendResponse = bot.execute(request);
             log.info("sent notification to telegram " + sendResponse.message());
