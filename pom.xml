@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>club.coimz.flatalert</groupId>
 	<artifactId>flatalert</artifactId>
-	<version>0.0.2-SNAPSHOT</version>
+	<version>0.0.4-SNAPSHOT</version>
 	<name>flatalert</name>
 	<description>vienna flatalert</description>
 	<properties>
@@ -57,6 +57,12 @@
 			<groupId>io.github.java-diff-utils</groupId>
 			<artifactId>java-diff-utils</artifactId>
 			<version>4.9</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.sourceforge.htmlunit</groupId>
+			<artifactId>htmlunit</artifactId>
+			<version>2.49.1</version>
 		</dependency>
 	</dependencies>
 

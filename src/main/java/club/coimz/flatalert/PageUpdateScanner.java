@@ -1,6 +1,8 @@
 package club.coimz.flatalert;
 
 
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.*;
 import com.pengrad.telegrambot.TelegramBot;
@@ -8,6 +10,7 @@ import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -40,8 +43,7 @@ public class PageUpdateScanner {
     public void init() throws IOException {
         bot = new TelegramBot(alertConfiguration.getToken());
         for (CoopConfig coopConfig : coopsConfiguration.getConfigs()) {
-            Document doc = Jsoup.connect(coopConfig.getUrl()).get();
-            String content = doc.select(coopConfig.getSelector()).first().toString();
+            String content = getContent(coopConfig);
             contentMap.put(coopConfig.getName(), content);
             log.info("starting to watch " + coopConfig.getName());
             sendAlert(INIT_TEMPLATE, coopConfig);
@@ -56,9 +58,7 @@ public class PageUpdateScanner {
 
     public void checkCoop(CoopConfig coopConfig) {
         try {
-            Document doc = Jsoup.connect(coopConfig.getUrl()).get();
-            String content = doc.select(coopConfig.getSelector()).first().toString();
-
+            String content = getContent(coopConfig);
             if (!contentMap.get(coopConfig.getName()).equals(content)) {
                 log.info("found update for " + coopConfig.getName() + ". sending alert...");
                 String diffMessage = calculateDiffMessage(contentMap.get(coopConfig.getName()), content);
@@ -72,6 +72,20 @@ public class PageUpdateScanner {
         } catch (Exception e) {
             log.error("error while checking " + coopConfig);
         }
+    }
+
+    private String getContent(CoopConfig coopConfig) throws IOException {
+        Document doc;
+        if (BooleanUtils.isTrue(coopConfig.getUseJavascript())) {
+            WebClient webClient = new WebClient();
+            webClient.getOptions().setThrowExceptionOnScriptError(false);
+            HtmlPage myPage = webClient.getPage(coopConfig.getUrl());
+            doc = Jsoup.parse(myPage.asXml());
+        } else {
+            doc = Jsoup.connect(coopConfig.getUrl()).get();
+        }
+        String content = doc.select(coopConfig.getSelector()).first().toString();
+        return BooleanUtils.isTrue(coopConfig.getRemoveHtml()) ? extractTextFromHtml(content) : content;
     }
 
     private String calculateDiffMessage(String oldContent, String newContent) {
@@ -109,7 +123,11 @@ public class PageUpdateScanner {
             total.append("\nchanged: \n");
             total.append(changed.toString());
         }
-        return total.toString()
+        return extractTextFromHtml(total.toString());
+    }
+
+    private String extractTextFromHtml(String html) {
+        return html
                 .replaceAll("\\<.*?>", "")
                 .replaceAll("&nbsp", " ");
     }

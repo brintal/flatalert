@@ -1,10 +1,14 @@
 
-
 execution:
   intervalMillis: 1000
   alerts:
     token: replaceMe #telegram bot token
     chatId: replaceMe #telegram chat id
+
+logging:
+  level:
+    root: INFO
+    com.gargoylesoftware.htmlunit: off
 
 coops:
   configs:
